@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/ Student_info
+    username : root
+    password : Thisuka2003#
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
