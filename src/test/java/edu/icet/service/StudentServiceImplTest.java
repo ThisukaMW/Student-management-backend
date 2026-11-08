@@ -4,7 +4,9 @@ import edu.icet.dto.request.StudentCreateRequest;
 import edu.icet.dto.request.StudentUpdateRequest;
 import edu.icet.dto.response.StudentResponse;
 import edu.icet.entity.Gender;
+import edu.icet.entity.Role;
 import edu.icet.entity.Student;
+import edu.icet.entity.User;
 import edu.icet.exception.DuplicateEmailException;
 import edu.icet.exception.StudentNotFoundException;
 import edu.icet.mapper.StudentMapperImpl;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -24,10 +27,14 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.List;
 import java.util.Optional;
 
+import static edu.icet.service.TestData.student;
+import static edu.icet.service.TestData.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,17 +45,21 @@ class StudentServiceImplTest {
     @Mock
     private StudentRepository studentRepository;
 
+    @Mock
+    private UserService userService;
+
     private StudentServiceImpl studentService;
 
     @BeforeEach
     void setUp() {
         // The real generated mapper, so mapping is covered too
-        studentService = new StudentServiceImpl(studentRepository, new StudentMapperImpl());
+        studentService = new StudentServiceImpl(studentRepository, new StudentMapperImpl(), userService);
     }
 
     @Test
-    void createSavesStudentWithNormalizedEmailAndReturnsResponse() {
-        when(studentRepository.existsByEmail("nimal@example.com")).thenReturn(false);
+    void createMakesStudentAccountAndLinkedProfile() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        when(userService.createUser("Nimal@Example.COM", "secret123", Role.STUDENT)).thenReturn(account);
         when(studentRepository.save(any(Student.class))).thenAnswer(invocation -> {
             Student saved = invocation.getArgument(0);
             saved.setId(1L);
@@ -59,10 +70,8 @@ class StudentServiceImplTest {
 
         ArgumentCaptor<Student> captor = ArgumentCaptor.forClass(Student.class);
         verify(studentRepository).save(captor.capture());
-        Student saved = captor.getValue();
-        assertThat(saved.getEmail()).isEqualTo("nimal@example.com");
-        assertThat(saved.getPassword()).isEqualTo("secret123");
-        assertThat(saved.getGender()).isEqualTo(Gender.MALE);
+        assertThat(captor.getValue().getUser()).isSameAs(account);
+        assertThat(captor.getValue().getGender()).isEqualTo(Gender.MALE);
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.email()).isEqualTo("nimal@example.com");
@@ -71,7 +80,7 @@ class StudentServiceImplTest {
 
     @Test
     void createRejectsDuplicateEmail() {
-        when(studentRepository.existsByEmail("nimal@example.com")).thenReturn(true);
+        when(userService.createUser(any(), any(), any())).thenThrow(new DuplicateEmailException("nimal@example.com"));
 
         assertThatThrownBy(() -> studentService.create(createRequest("nimal@example.com")))
                 .isInstanceOf(DuplicateEmailException.class)
@@ -80,10 +89,14 @@ class StudentServiceImplTest {
     }
 
     @Test
-    void getByIdReturnsStudent() {
-        when(studentRepository.findById(1L)).thenReturn(Optional.of(student(1L, "nimal@example.com")));
+    void getByIdReturnsStudentWithAccountEmail() {
+        when(studentRepository.findById(1L))
+                .thenReturn(Optional.of(student(1L, user(10L, "nimal@example.com", Role.STUDENT))));
 
-        assertThat(studentService.getById(1L).lastName()).isEqualTo("Perera");
+        StudentResponse response = studentService.getById(1L);
+
+        assertThat(response.lastName()).isEqualTo("Perera");
+        assertThat(response.email()).isEqualTo("nimal@example.com");
     }
 
     @Test
@@ -98,7 +111,8 @@ class StudentServiceImplTest {
     @Test
     void searchMapsEachStudentToResponse() {
         Pageable pageable = PageRequest.of(0, 20);
-        Page<Student> page = new PageImpl<>(List.of(student(1L, "nimal@example.com")), pageable, 1);
+        Page<Student> page = new PageImpl<>(
+                List.of(student(1L, user(10L, "nimal@example.com", Role.STUDENT))), pageable, 1);
         when(studentRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
 
         Page<StudentResponse> result = studentService.search("nim", null, null, pageable);
@@ -108,19 +122,34 @@ class StudentServiceImplTest {
     }
 
     @Test
-    void updateReplacesFieldsButKeepsPassword() {
-        Student existing = student(1L, "nimal@example.com");
+    void updateReplacesProfileFieldsAndChangesAccountEmail() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        Student existing = student(1L, account);
         when(studentRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(studentRepository.existsByEmailAndIdNot("nimal.silva@example.com", 1L)).thenReturn(false);
         when(studentRepository.saveAndFlush(existing)).thenReturn(existing);
 
         StudentResponse response = studentService.update(1L, updateRequest("Nimal.Silva@example.com"));
 
+        verify(userService).changeEmail(account, "Nimal.Silva@example.com");
         assertThat(response.lastName()).isEqualTo("Silva");
         assertThat(response.batch()).isEqualTo("2024");
-        assertThat(response.email()).isEqualTo("nimal.silva@example.com");
-        assertThat(existing.getPassword()).isEqualTo("secret123");
         assertThat(existing.getId()).isEqualTo(1L);
+        assertThat(existing.getUser()).isSameAs(account);
+    }
+
+    @Test
+    void updateOnlyTouchesAccountSettingsWhenSent() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        Student existing = student(1L, account);
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(studentRepository.saveAndFlush(existing)).thenReturn(existing);
+
+        studentService.update(1L, updateRequest("nimal@example.com"));
+        verify(userService, never()).updateAccountSettings(any(), any(), any());
+
+        studentService.update(1L, new StudentUpdateRequest(
+                "Nimal", "Silva", 22, "nimal@example.com", "ICET", "2024", Gender.MALE, null, false));
+        verify(userService).updateAccountSettings(account, null, false);
     }
 
     @Test
@@ -133,9 +162,11 @@ class StudentServiceImplTest {
     }
 
     @Test
-    void updateRejectsEmailOwnedByAnotherStudent() {
-        when(studentRepository.findById(1L)).thenReturn(Optional.of(student(1L, "nimal@example.com")));
-        when(studentRepository.existsByEmailAndIdNot("kamal@example.com", 1L)).thenReturn(true);
+    void updateRejectsEmailOwnedByAnotherAccount() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student(1L, account)));
+        doThrow(new DuplicateEmailException("kamal@example.com"))
+                .when(userService).changeEmail(account, "kamal@example.com");
 
         assertThatThrownBy(() -> studentService.update(1L, updateRequest("kamal@example.com")))
                 .isInstanceOf(DuplicateEmailException.class);
@@ -143,21 +174,25 @@ class StudentServiceImplTest {
     }
 
     @Test
-    void deleteRemovesExistingStudent() {
-        when(studentRepository.existsById(1L)).thenReturn(true);
+    void deleteRemovesProfileThenAccount() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        Student existing = student(1L, account);
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(existing));
 
         studentService.delete(1L);
 
-        verify(studentRepository).deleteById(1L);
+        InOrder order = inOrder(studentRepository, userService);
+        order.verify(studentRepository).delete(existing);
+        order.verify(userService).delete(account);
     }
 
     @Test
     void deleteThrowsWhenMissing() {
-        when(studentRepository.existsById(99L)).thenReturn(false);
+        when(studentRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> studentService.delete(99L))
                 .isInstanceOf(StudentNotFoundException.class);
-        verify(studentRepository, never()).deleteById(any());
+        verify(userService, never()).delete(any());
     }
 
     private static StudentCreateRequest createRequest(String email) {
@@ -166,19 +201,5 @@ class StudentServiceImplTest {
 
     private static StudentUpdateRequest updateRequest(String email) {
         return new StudentUpdateRequest("Nimal", "Silva", 22, email, "ICET", "2024", Gender.MALE);
-    }
-
-    static Student student(Long id, String email) {
-        return Student.builder()
-                .id(id)
-                .firstName("Nimal")
-                .lastName("Perera")
-                .age(21)
-                .email(email)
-                .password("secret123")
-                .institute("ICET")
-                .batch("2023")
-                .gender(Gender.MALE)
-                .build();
     }
 }

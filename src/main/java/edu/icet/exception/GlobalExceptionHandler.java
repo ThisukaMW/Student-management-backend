@@ -1,6 +1,8 @@
 package edu.icet.exception;
 
 import edu.icet.dto.response.ApiError;
+import edu.icet.security.RestAccessDeniedHandler;
+import edu.icet.security.RestAuthenticationEntryPoint;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -10,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -17,7 +21,6 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 
@@ -44,7 +47,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Data integrity violation on {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
-        return build(HttpStatus.CONFLICT, "A student with this email already exists", request.getRequestURI(), List.of());
+        return build(HttpStatus.CONFLICT, "An account with this email already exists", request.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
@@ -52,10 +55,35 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI(), List.of());
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    // Shaped like a validation failure so the client can show it next to the field
+    @ExceptionHandler(FieldValidationException.class)
+    ResponseEntity<ApiError> handleFieldValidation(FieldValidationException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Validation failed", request.getRequestURI(),
+                List.of(new ApiError.FieldError(ex.getField(), ex.getMessage())));
+    }
+
     // e.g. ?sort=unknownField
     @ExceptionHandler(PropertyReferenceException.class)
     ResponseEntity<ApiError> handleBadSortProperty(PropertyReferenceException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    // @PreAuthorize denials are thrown inside the controller call, so they arrive here rather than at the
+    // security filter's AccessDeniedHandler; without this they would fall through to the 500 handler below
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, RestAccessDeniedHandler.FORBIDDEN, request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, RestAuthenticationEntryPoint.MISSING_TOKEN, request.getRequestURI(),
+                List.of());
     }
 
     @ExceptionHandler(Exception.class)
@@ -88,24 +116,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         // Spring's ProblemDetail "detail" is written for clients, unlike ex.getMessage()
         String message = body instanceof ProblemDetail problem && problem.getDetail() != null
                 ? problem.getDetail()
-                : reasonPhrase(statusCode);
-        ApiError error = apiError(statusCode, message, path(request), List.of());
+                : ApiError.reasonPhrase(statusCode);
+        ApiError error = ApiError.of(statusCode, message, path(request));
         return ResponseEntity.status(statusCode).headers(headers).body(error);
     }
 
     private static ResponseEntity<ApiError> build(HttpStatus status, String message, String path,
                                                   List<ApiError.FieldError> fieldErrors) {
-        return ResponseEntity.status(status).body(apiError(status, message, path, fieldErrors));
-    }
-
-    private static ApiError apiError(HttpStatusCode status, String message, String path,
-                                     List<ApiError.FieldError> fieldErrors) {
-        return new ApiError(Instant.now(), status.value(), reasonPhrase(status), message, path, fieldErrors);
-    }
-
-    private static String reasonPhrase(HttpStatusCode status) {
-        HttpStatus resolved = HttpStatus.resolve(status.value());
-        return resolved != null ? resolved.getReasonPhrase() : String.valueOf(status.value());
+        return ResponseEntity.status(status).body(ApiError.of(status, message, path, fieldErrors));
     }
 
     private static String path(WebRequest request) {

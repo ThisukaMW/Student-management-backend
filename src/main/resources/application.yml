@@ -11,6 +11,9 @@ spring:
     hibernate:
       # Flyway owns the schema (src/main/resources/db/migration); Hibernate only checks it matches the entities
       ddl-auto: validate
+    properties:
+      # Store created_at / updated_at / expiry times in UTC, whatever the server's time zone
+      hibernate.jdbc.time_zone: UTC
 
   data:
     web:
@@ -23,6 +26,19 @@ spring:
       accept-case-insensitive-enums: true
 
 app:
+  security:
+    jwt:
+      # Required: at least 32 bytes. Set JWT_SECRET in .env or the environment; startup fails without it
+      secret: ${JWT_SECRET:}
+      issuer: student-management
+      access-token-ttl: 15m
+      refresh-token-ttl: 7d
+
+  # First admin, created on startup only if no ADMIN exists. Leave unset to skip (a warning is logged)
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+
   cors:
     allowed-origins:
       - http://localhost:5173

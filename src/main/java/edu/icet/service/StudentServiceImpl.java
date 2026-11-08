@@ -3,8 +3,9 @@ package edu.icet.service;
 import edu.icet.dto.request.StudentCreateRequest;
 import edu.icet.dto.request.StudentUpdateRequest;
 import edu.icet.dto.response.StudentResponse;
+import edu.icet.entity.Role;
 import edu.icet.entity.Student;
-import edu.icet.exception.DuplicateEmailException;
+import edu.icet.entity.User;
 import edu.icet.exception.StudentNotFoundException;
 import edu.icet.mapper.StudentMapper;
 import edu.icet.repository.StudentRepository;
@@ -22,16 +23,14 @@ public class StudentServiceImpl implements StudentService {
 
     private final StudentRepository studentRepository;
     private final StudentMapper studentMapper;
+    private final UserService userService;
 
     @Override
     @Transactional
     public StudentResponse create(StudentCreateRequest request) {
-        String email = EmailNormalizer.normalize(request.email());
-        if (studentRepository.existsByEmail(email)) {
-            throw new DuplicateEmailException(email);
-        }
+        User user = userService.createUser(request.email(), request.password(), Role.STUDENT);
         Student student = studentMapper.toEntity(request);
-        student.setEmail(email);
+        student.setUser(user);
         return studentMapper.toResponse(studentRepository.save(student));
     }
 
@@ -51,23 +50,23 @@ public class StudentServiceImpl implements StudentService {
     @Transactional
     public StudentResponse update(Long id, StudentUpdateRequest request) {
         Student student = findOrThrow(id);
-        String email = EmailNormalizer.normalize(request.email());
-        if (studentRepository.existsByEmailAndIdNot(email, id)) {
-            throw new DuplicateEmailException(email);
+        userService.changeEmail(student.getUser(), request.email());
+        // Only an ADMIN gets here with these set: @PreAuthorize on the controller rejects owners who send them
+        if (request.changesAccountSettings()) {
+            userService.updateAccountSettings(student.getUser(), request.role(), request.enabled());
         }
         studentMapper.updateEntity(request, student);
-        student.setEmail(email);
         // Flush now so a unique-constraint race surfaces here, not at commit time
         return studentMapper.toResponse(studentRepository.saveAndFlush(student));
     }
 
+    /** Deletes the profile and its login account: a student account without a profile has no use. */
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!studentRepository.existsById(id)) {
-            throw new StudentNotFoundException(id);
-        }
-        studentRepository.deleteById(id);
+        Student student = findOrThrow(id);
+        studentRepository.delete(student);
+        userService.delete(student.getUser());
     }
 
     private Student findOrThrow(Long id) {

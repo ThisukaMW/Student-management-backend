@@ -12,12 +12,15 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface StudentMapper {
 
+    // The account (email, password) is created separately by UserService
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "user", ignore = true)
     Student toEntity(StudentCreateRequest request);
 
+    @Mapping(target = "email", source = "user.email")
     StudentResponse toResponse(Student student);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "user", ignore = true)
     void updateEntity(StudentUpdateRequest request, @MappingTarget Student student);
 }
