@@ -83,16 +83,13 @@ The `Student_info` database is created automatically on first run (`createDataba
 
 ### 2. Configure the connection
 
-The MySQL password is read from the `DB_PASSWORD` environment variable, so it is never stored in the repo. Set it before running:
+The MySQL password is read from `DB_PASSWORD`, so it is never stored in the repo. Create a `.env` file in the project root (it is git-ignored):
 
-```bash
-# PowerShell
-$env:DB_PASSWORD = "your_password"
-# bash
-export DB_PASSWORD=your_password
+```properties
+DB_PASSWORD=your_password
 ```
 
-In IntelliJ, add `DB_PASSWORD=your_password` under **Run → Edit Configurations → Environment variables**.
+A `DB_PASSWORD` environment variable works too and takes precedence over `.env`.
 
 Set `MYSQL_HOST` too if MySQL is not on `localhost`. The username defaults to `root` in `src/main/resources/application.yml`.
 
