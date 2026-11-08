@@ -20,3 +20,9 @@ spring:
     mapper:
       # Accept "male" / "Male" as well as "MALE" for the gender enum
       accept-case-insensitive-enums: true
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:3000
