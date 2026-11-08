@@ -11,6 +11,9 @@ spring:
     hibernate:
       # Flyway owns the schema (src/main/resources/db/migration); Hibernate only checks it matches the entities
       ddl-auto: validate
+    properties:
+      # Store created_at / updated_at / expiry times in UTC, whatever the server's time zone
+      hibernate.jdbc.time_zone: UTC
 
   data:
     web:

@@ -113,7 +113,7 @@ class StudentControllerTest {
         mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.message").value("A student with email nimal@example.com already exists"));
+                .andExpect(jsonPath("$.message").value("An account with email nimal@example.com already exists"));
     }
 
     @Test

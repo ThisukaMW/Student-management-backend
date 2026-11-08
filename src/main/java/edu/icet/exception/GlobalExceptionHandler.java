@@ -44,7 +44,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Data integrity violation on {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
-        return build(HttpStatus.CONFLICT, "A student with this email already exists", request.getRequestURI(), List.of());
+        return build(HttpStatus.CONFLICT, "An account with this email already exists", request.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
