@@ -206,10 +206,10 @@ To change the schema, add a new migration such as `V2__add_phone_number.sql`. Ne
 
 ### 3. CORS
 
-Browsers may call the API from the origins in `app.cors.allowed-origins` (default `http://localhost:5173` and `http://localhost:3000`). To allow another origin, change it in `application.yml` or set an environment variable:
+Browsers may call the API from the origins in `app.cors.allowed-origins` (default `http://localhost:5173`, `http://localhost:3000`, and VS Code Live Server on `http://127.0.0.1:5500` and `http://localhost:5500`). To allow another origin, change it in `application.yml` or set an environment variable:
 
 ```properties
-APP_CORS_ALLOWED_ORIGINS=http://localhost:5500,http://localhost:5173
+APP_CORS_ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:5500
 ```
 
 ### 4. Run the application
@@ -243,7 +243,7 @@ The tests need no database: service tests use Mockito, and controller tests use 
 | `Access denied for user 'root'@'localhost' (using password: YES)` | The password in `.env` doesn't match your MySQL root password. |
 | `Communications link failure` | MySQL is not running. Start the `MySQL80` service. |
 | `Port 8080 was already in use` | Another copy of the app is still running. Stop it first. |
-| Browser shows a CORS error | Add the frontend's origin to `app.cors.allowed-origins`. |
+| Browser shows a CORS error | Add the frontend's origin to `app.cors.allowed-origins`. Opening the HTML files straight from disk (`file://`) can't work; serve them with Live Server instead. |
 
 ## Related
 
