@@ -55,6 +55,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI(), List.of());
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    // Shaped like a validation failure so the client can show it next to the field
+    @ExceptionHandler(IncorrectPasswordException.class)
+    ResponseEntity<ApiError> handleIncorrectPassword(IncorrectPasswordException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Validation failed", request.getRequestURI(),
+                List.of(new ApiError.FieldError(ex.getField(), ex.getMessage())));
+    }
+
     // e.g. ?sort=unknownField
     @ExceptionHandler(PropertyReferenceException.class)
     ResponseEntity<ApiError> handleBadSortProperty(PropertyReferenceException ex, HttpServletRequest request) {
