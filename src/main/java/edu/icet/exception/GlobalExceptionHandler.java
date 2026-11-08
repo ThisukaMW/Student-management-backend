@@ -61,8 +61,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     // Shaped like a validation failure so the client can show it next to the field
-    @ExceptionHandler(IncorrectPasswordException.class)
-    ResponseEntity<ApiError> handleIncorrectPassword(IncorrectPasswordException ex, HttpServletRequest request) {
+    @ExceptionHandler(FieldValidationException.class)
+    ResponseEntity<ApiError> handleFieldValidation(FieldValidationException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Validation failed", request.getRequestURI(),
                 List.of(new ApiError.FieldError(ex.getField(), ex.getMessage())));
     }

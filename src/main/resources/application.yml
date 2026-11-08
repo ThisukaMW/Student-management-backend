@@ -34,6 +34,11 @@ app:
       access-token-ttl: 15m
       refresh-token-ttl: 7d
 
+  # First admin, created on startup only if no ADMIN exists. Leave unset to skip (a warning is logged)
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+
   cors:
     allowed-origins:
       - http://localhost:5173
