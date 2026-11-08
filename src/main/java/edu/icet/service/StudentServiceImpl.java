@@ -51,6 +51,10 @@ public class StudentServiceImpl implements StudentService {
     public StudentResponse update(Long id, StudentUpdateRequest request) {
         Student student = findOrThrow(id);
         userService.changeEmail(student.getUser(), request.email());
+        // Only an ADMIN gets here with these set: @PreAuthorize on the controller rejects owners who send them
+        if (request.changesAccountSettings()) {
+            userService.updateAccountSettings(student.getUser(), request.role(), request.enabled());
+        }
         studentMapper.updateEntity(request, student);
         // Flush now so a unique-constraint race surfaces here, not at commit time
         return studentMapper.toResponse(studentRepository.saveAndFlush(student));

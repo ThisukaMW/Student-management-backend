@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +25,15 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
+/**
+ * Student profiles. Who may do what:
+ * <ul>
+ *   <li>list/search: ADMIN, LECTURER</li>
+ *   <li>read one: ADMIN, LECTURER, or the student who owns it</li>
+ *   <li>create, delete: ADMIN</li>
+ *   <li>update: ADMIN, or the owner as long as they don't send role/enabled</li>
+ * </ul>
+ */
 @RestController
 @RequestMapping("/api/v1/students")
 @RequiredArgsConstructor
@@ -31,7 +41,9 @@ public class StudentController {
 
     private final StudentService studentService;
 
+    /** Creates the STUDENT account too, with the initial password from the request. */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StudentResponse> create(@Valid @RequestBody StudentCreateRequest request) {
         StudentResponse created = studentService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -42,11 +54,13 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LECTURER') or @studentSecurity.isOwner(#id, authentication)")
     public ResponseEntity<StudentResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(studentService.getById(id));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LECTURER')")
     public ResponseEntity<PagedModel<StudentResponse>> search(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String batch,
@@ -56,12 +70,16 @@ public class StudentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(@studentSecurity.isOwner(#id, authentication) and !#request.changesAccountSettings())")
     public ResponseEntity<StudentResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody StudentUpdateRequest request) {
         return ResponseEntity.ok(studentService.update(id, request));
     }
 
+    /** Deletes the linked account too. */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         studentService.delete(id);
         return ResponseEntity.noContent().build();

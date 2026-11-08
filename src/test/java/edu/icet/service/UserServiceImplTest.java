@@ -26,11 +26,14 @@ class UserServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private TokenService tokenService;
+
     private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {
-        userService = new UserServiceImpl(userRepository, ENCODER);
+        userService = new UserServiceImpl(userRepository, ENCODER, tokenService);
     }
 
     @Test
@@ -87,5 +90,37 @@ class UserServiceImplTest {
         assertThatThrownBy(() -> userService.changeEmail(account, "kamal@example.com"))
                 .isInstanceOf(DuplicateEmailException.class);
         assertThat(account.getEmail()).isEqualTo("nimal@example.com");
+    }
+
+    @Test
+    void disablingAnAccountRevokesItsRefreshTokens() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+
+        userService.updateAccountSettings(account, null, false);
+
+        assertThat(account.isEnabled()).isFalse();
+        verify(tokenService).revokeAll(10L);
+    }
+
+    @Test
+    void roleChangeAloneKeepsSessions() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+
+        userService.updateAccountSettings(account, Role.LECTURER, null);
+
+        assertThat(account.getRole()).isEqualTo(Role.LECTURER);
+        assertThat(account.isEnabled()).isTrue();
+        verify(tokenService, never()).revokeAll(any());
+    }
+
+    @Test
+    void reEnablingDoesNotRevoke() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        account.setEnabled(false);
+
+        userService.updateAccountSettings(account, null, true);
+
+        assertThat(account.isEnabled()).isTrue();
+        verify(tokenService, never()).revokeAll(any());
     }
 }

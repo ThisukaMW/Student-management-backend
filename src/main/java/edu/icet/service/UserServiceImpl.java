@@ -16,6 +16,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
     @Override
     public User createUser(String email, String rawPassword, Role role) {
@@ -42,6 +43,20 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateEmailException(normalized);
         }
         user.setEmail(normalized);
+    }
+
+    @Override
+    public void updateAccountSettings(User user, Role role, Boolean enabled) {
+        if (role != null) {
+            user.setRole(role);
+        }
+        if (enabled != null) {
+            boolean disabling = user.isEnabled() && !enabled;
+            user.setEnabled(enabled);
+            if (disabling) {
+                tokenService.revokeAll(user.getId());
+            }
+        }
     }
 
     @Override

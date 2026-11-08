@@ -12,5 +12,11 @@ public interface UserService {
     /** Changes the login email, rejecting one that another account already uses. */
     void changeEmail(User user, String newEmail);
 
+    /**
+     * Changes role and/or enabled flag; null leaves a value unchanged. Disabling an account
+     * revokes its refresh tokens so it can't get new access tokens.
+     */
+    void updateAccountSettings(User user, Role role, Boolean enabled);
+
     void delete(User user);
 }

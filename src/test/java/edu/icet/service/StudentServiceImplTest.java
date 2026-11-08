@@ -138,6 +138,21 @@ class StudentServiceImplTest {
     }
 
     @Test
+    void updateOnlyTouchesAccountSettingsWhenSent() {
+        User account = user(10L, "nimal@example.com", Role.STUDENT);
+        Student existing = student(1L, account);
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(studentRepository.saveAndFlush(existing)).thenReturn(existing);
+
+        studentService.update(1L, updateRequest("nimal@example.com"));
+        verify(userService, never()).updateAccountSettings(any(), any(), any());
+
+        studentService.update(1L, new StudentUpdateRequest(
+                "Nimal", "Silva", 22, "nimal@example.com", "ICET", "2024", Gender.MALE, null, false));
+        verify(userService).updateAccountSettings(account, null, false);
+    }
+
+    @Test
     void updateThrowsWhenMissing() {
         when(studentRepository.findById(99L)).thenReturn(Optional.empty());
 
