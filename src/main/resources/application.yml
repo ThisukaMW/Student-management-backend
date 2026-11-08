@@ -7,5 +7,16 @@ spring:
     password: ${DB_PASSWORD:}
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
+
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+  jackson:
+    mapper:
+      # Accept "male" / "Male" as well as "MALE" for the gender enum
+      accept-case-insensitive-enums: true

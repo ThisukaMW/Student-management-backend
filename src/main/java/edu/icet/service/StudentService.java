@@ -1,15 +1,20 @@
 package edu.icet.service;
 
 import edu.icet.dto.request.StudentCreateRequest;
+import edu.icet.dto.request.StudentUpdateRequest;
 import edu.icet.dto.response.StudentResponse;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface StudentService {
 
-    void createStudent(StudentCreateRequest request);
+    StudentResponse create(StudentCreateRequest request);
 
-    boolean getEmailAndPassword(String email, String password);
+    StudentResponse getById(Long id);
 
-    List<StudentResponse> getAll();
+    Page<StudentResponse> search(String name, String batch, String institute, Pageable pageable);
+
+    StudentResponse update(Long id, StudentUpdateRequest request);
+
+    void delete(Long id);
 }
