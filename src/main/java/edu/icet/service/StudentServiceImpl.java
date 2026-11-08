@@ -1,19 +1,18 @@
 package edu.icet.service;
 
-import edu.icet.dao.StudentEntity;
-import edu.icet.dto.Student;
+import edu.icet.entity.Student;
 import edu.icet.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class StudentServiceImpl implements StudentService{
+public class StudentServiceImpl implements StudentService {
     @Autowired
     StudentRepository studentRepository;
 
     @Override
-    public void createStudent(Student student) {
-        StudentEntity model = new StudentEntity();
+    public void createStudent(edu.icet.dto.Student student) {
+        Student model = new Student();
         model.setFirstName(student.getFirstName());
         model.setLastName(student.getLastName());
         model.setAge(student.getAge());
@@ -27,16 +26,11 @@ public class StudentServiceImpl implements StudentService{
 
     @Override
     public boolean getEmailAndPassword(String email, String password) {
-        StudentEntity studentByEmailAndPassword = studentRepository.findStudentByEmailAndPassword(email, password);
-        return studentByEmailAndPassword!=null ? true : false;
+        return studentRepository.findStudentByEmailAndPassword(email, password) != null;
     }
 
     @Override
-    public Iterable<StudentEntity> getAll() {
-       return studentRepository.findAll();
+    public Iterable<Student> getAll() {
+        return studentRepository.findAll();
     }
 }
-
-
-
-

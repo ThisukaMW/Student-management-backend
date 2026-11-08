@@ -1,14 +1,12 @@
 package edu.icet.service;
 
-import edu.icet.dao.StudentEntity;
-import edu.icet.dto.Student;
+import edu.icet.entity.Student;
 
 public interface StudentService {
 
-    void createStudent(Student student);
+    void createStudent(edu.icet.dto.Student student);
 
-    boolean getEmailAndPassword(String email,String password);
+    boolean getEmailAndPassword(String email, String password);
 
-
-    Iterable<StudentEntity> getAll();
+    Iterable<Student> getAll();
 }
