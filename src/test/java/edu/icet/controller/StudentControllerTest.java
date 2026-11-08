@@ -89,9 +89,9 @@ class StudentControllerTest {
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.path").value("/api/v1/students"))
                 .andExpect(jsonPath("$.timestamp").exists())
-                .andExpect(jsonPath("$.fieldErrors", hasSize(4)))
+                .andExpect(jsonPath("$.fieldErrors", hasSize(5)))
                 .andExpect(jsonPath("$.fieldErrors[*].field").value(
-                        org.hamcrest.Matchers.containsInAnyOrder("age", "email", "firstName", "password")))
+                        org.hamcrest.Matchers.containsInAnyOrder("age", "email", "firstName", "password", "password")))
                 // A rejected password must never be echoed back
                 .andExpect(content().string(not(org.hamcrest.Matchers.containsString("short"))));
         verify(studentService, never()).create(any());
