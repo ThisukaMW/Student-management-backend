@@ -194,6 +194,15 @@ class StudentControllerTest {
     }
 
     @Test
+    void corsPreflightAllowsLiveServerOrigin() throws Exception {
+        mockMvc.perform(options("/api/v1/students")
+                        .header(HttpHeaders.ORIGIN, "http://127.0.0.1:5500")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://127.0.0.1:5500"));
+    }
+
+    @Test
     void corsPreflightRejectsUnknownOrigin() throws Exception {
         mockMvc.perform(options("/api/v1/students")
                         .header(HttpHeaders.ORIGIN, "http://evil.example")
