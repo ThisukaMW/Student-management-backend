@@ -1,14 +1,20 @@
 package edu.icet.service;
 
-import edu.icet.dao.StudentEntity;
-import edu.icet.dto.Student;
+import edu.icet.dto.request.StudentCreateRequest;
+import edu.icet.dto.request.StudentUpdateRequest;
+import edu.icet.dto.response.StudentResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface StudentService {
 
-    void createStudent(Student student);
+    StudentResponse create(StudentCreateRequest request);
 
-    boolean getEmailAndPassword(String email,String password);
+    StudentResponse getById(Long id);
 
+    Page<StudentResponse> search(String name, String batch, String institute, Pageable pageable);
 
-    Iterable<StudentEntity> getAll();
+    StudentResponse update(Long id, StudentUpdateRequest request);
+
+    void delete(Long id);
 }

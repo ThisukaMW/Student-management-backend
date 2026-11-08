@@ -7,5 +7,23 @@ spring:
     password: ${DB_PASSWORD:}
 
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
+      # Flyway owns the schema (src/main/resources/db/migration); Hibernate only checks it matches the entities
+      ddl-auto: validate
+
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+  jackson:
+    mapper:
+      # Accept "male" / "Male" as well as "MALE" for the gender enum
+      accept-case-insensitive-enums: true
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:3000
