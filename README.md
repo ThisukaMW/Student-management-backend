@@ -68,7 +68,7 @@ register ──► login ──► call APIs with "Authorization: Bearer <access
      "user": { "id": 2, "email": "nimal@example.com", "role": "STUDENT" }
    }
    ```
-3. **Call the API:** send `Authorization: Bearer <accessToken>`. The token is valid for 15 minutes (`expiresIn` is in seconds). It contains the user id (`sub`), `email` and `role`.
+3. **Call the API:** send `Authorization: Bearer <accessToken>`. The token is valid for 15 minutes (`expiresIn` is in seconds). It contains the user id (`sub`), `email` and `role`. Spring's token validator allows **60 seconds of clock skew**, so in practice a token is accepted for up to about a minute after `exp`.
 4. **Refresh:** when the access token expires (the API returns 401), send the refresh token to `POST /api/v1/auth/refresh`. You get a **new pair**, and the old refresh token stops working (rotation). Refresh tokens last 7 days.
 5. **Log out:** `POST /api/v1/auth/logout` revokes the given refresh token. The access token keeps working until it expires, so the client should also discard it.
 
@@ -76,7 +76,9 @@ register ──► login ──► call APIs with "Authorization: Bearer <access
 - They are random 256-bit values, and the database stores only their SHA-256 hash.
 - Each one can be used once. If a refresh token that has already been used or revoked is presented again, the server assumes it was stolen and revokes **all** of that user's refresh tokens, so every device has to log in again.
 - Changing your password also ends all sessions.
-- Disabled accounts can't log in or refresh. An access token issued before the account was disabled still works until it expires (15 minutes at most).
+- Disabled accounts can't log in or refresh. An access token issued before the account was disabled still works until it expires (15 minutes at most, plus the clock skew).
+
+**Writing a client:** because reuse revokes everything, a client must never send the same refresh token twice. Run one refresh at a time, including across browser tabs that share storage, and always send the newest refresh token you have. After any refresh, logout must send the *new* refresh token, not the old one. The [React frontend](https://github.com/ThisukaMW/Student-management#how-sign-in-works) does this: it keeps the access token in memory, the refresh token in `localStorage`, and serializes refreshes with the Web Locks API.
 
 ## Roles and permissions
 
@@ -316,7 +318,7 @@ To change the schema, add a new migration such as `V4__add_phone_number.sql`. Ne
 
 ### 3. CORS
 
-Browsers may call the API from the origins in `app.cors.allowed-origins`. The defaults are `http://localhost:5173` and `http://localhost:3000`, plus VS Code Live Server on `http://127.0.0.1:5500` and `http://localhost:5500`. The `Authorization` header is allowed. To allow another origin, change it in `application.yml` or set an environment variable:
+Browsers may call the API from the origins in `app.cors.allowed-origins`. The defaults are `http://localhost:5173` (the [React frontend](https://github.com/ThisukaMW/Student-management)'s Vite dev server) and `http://localhost:3000`, plus VS Code Live Server on `http://127.0.0.1:5500` and `http://localhost:5500`, kept from the old HTML frontend. Origins must match exactly: `http://127.0.0.1:5173` is a different origin from `http://localhost:5173`. The `Authorization` header is allowed. To allow another origin, change it in `application.yml` or set an environment variable:
 
 ```properties
 APP_CORS_ALLOWED_ORIGINS=http://localhost:8000,http://localhost:5173
@@ -409,4 +411,4 @@ The tests need no database:
 
 ## Related
 
-- Frontend: [Student-management](https://github.com/ThisukaMW/Student-management)
+- Frontend: [Student-management](https://github.com/ThisukaMW/Student-management), a React + Vite + MUI app that uses this API's JWT authentication. Run this backend on port 8080, then `npm run dev` in the frontend and open `http://localhost:5173`.
