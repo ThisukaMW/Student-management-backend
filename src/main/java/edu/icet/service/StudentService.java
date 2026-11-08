@@ -1,12 +1,15 @@
 package edu.icet.service;
 
-import edu.icet.entity.Student;
+import edu.icet.dto.request.StudentCreateRequest;
+import edu.icet.dto.response.StudentResponse;
+
+import java.util.List;
 
 public interface StudentService {
 
-    void createStudent(edu.icet.dto.Student student);
+    void createStudent(StudentCreateRequest request);
 
     boolean getEmailAndPassword(String email, String password);
 
-    Iterable<Student> getAll();
+    List<StudentResponse> getAll();
 }

@@ -1,10 +1,13 @@
 package edu.icet.controller;
 
-import edu.icet.entity.Student;
+import edu.icet.dto.request.StudentCreateRequest;
+import edu.icet.dto.response.StudentResponse;
 import edu.icet.service.StudentService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @CrossOrigin
@@ -16,7 +19,7 @@ public class StudentController {
     StudentService service;
 
     @PostMapping
-    public void createStudent(@RequestBody edu.icet.dto.Student student){
+    public void createStudent(@RequestBody StudentCreateRequest student){
         service.createStudent(student);
     }
 
@@ -27,7 +30,7 @@ public class StudentController {
     }
 
     @GetMapping
-    public Iterable<Student> getAll(){
+    public List<StudentResponse> getAll(){
        return service.getAll();
     }
 }

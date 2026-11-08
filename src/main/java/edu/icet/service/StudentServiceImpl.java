@@ -1,27 +1,26 @@
 package edu.icet.service;
 
-import edu.icet.entity.Student;
+import edu.icet.dto.request.StudentCreateRequest;
+import edu.icet.dto.response.StudentResponse;
+import edu.icet.mapper.StudentMapper;
 import edu.icet.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.StreamSupport;
 
 @Service
 public class StudentServiceImpl implements StudentService {
     @Autowired
     StudentRepository studentRepository;
 
+    @Autowired
+    StudentMapper studentMapper;
+
     @Override
-    public void createStudent(edu.icet.dto.Student student) {
-        Student model = new Student();
-        model.setFirstName(student.getFirstName());
-        model.setLastName(student.getLastName());
-        model.setAge(student.getAge());
-        model.setEmail(student.getEmail());
-        model.setPassword(student.getPassword());
-        model.setInstitute(student.getInstitute());
-        model.setBatch(student.getBatch());
-        model.setGender(student.getGender());
-        studentRepository.save(model);
+    public void createStudent(StudentCreateRequest request) {
+        studentRepository.save(studentMapper.toEntity(request));
     }
 
     @Override
@@ -30,7 +29,9 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Iterable<Student> getAll() {
-        return studentRepository.findAll();
+    public List<StudentResponse> getAll() {
+        return StreamSupport.stream(studentRepository.findAll().spliterator(), false)
+                .map(studentMapper::toResponse)
+                .toList();
     }
 }
