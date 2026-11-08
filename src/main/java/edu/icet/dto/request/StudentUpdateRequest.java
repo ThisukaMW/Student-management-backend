@@ -21,4 +21,8 @@ public record StudentUpdateRequest(
         @NotBlank @Size(max = 100) String batch,
         @NotNull Gender gender
 ) {
+    public StudentUpdateRequest {
+        // Trim before validation so " a@b.com " passes @Email
+        email = email == null ? null : email.trim();
+    }
 }

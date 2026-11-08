@@ -19,4 +19,8 @@ public record StudentCreateRequest(
         @NotBlank @Size(max = 100) String batch,
         @NotNull Gender gender
 ) {
+    public StudentCreateRequest {
+        // Trim before validation so " a@b.com " passes @Email
+        email = email == null ? null : email.trim();
+    }
 }
