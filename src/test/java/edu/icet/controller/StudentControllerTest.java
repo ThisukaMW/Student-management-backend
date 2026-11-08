@@ -5,6 +5,7 @@ import edu.icet.dto.response.StudentResponse;
 import edu.icet.entity.Gender;
 import edu.icet.exception.DuplicateEmailException;
 import edu.icet.exception.StudentNotFoundException;
+import edu.icet.security.WithSecurityConfig;
 import edu.icet.service.StudentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static edu.icet.security.TestTokens.admin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -39,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(StudentController.class)
+@WithSecurityConfig
 class StudentControllerTest {
 
     private static final String VALID_BODY = """
@@ -67,7 +70,7 @@ class StudentControllerTest {
     void createReturns201WithLocationAndBody() throws Exception {
         when(studentService.create(any(StudentCreateRequest.class))).thenReturn(NIMAL);
 
-        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
+        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY).with(admin()))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost/api/v1/students/1"))
                 .andExpect(jsonPath("$.id").value(1))
@@ -82,7 +85,7 @@ class StudentControllerTest {
                  "password": "short", "institute": "ICET", "batch": "2023", "gender": "MALE"}
                 """;
 
-        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(invalid))
+        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(invalid).with(admin()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -99,7 +102,7 @@ class StudentControllerTest {
 
     @Test
     void createReturns400ForMalformedJson() throws Exception {
-        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content("{not json"))
+        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content("{not json").with(admin()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.fieldErrors", hasSize(0)));
@@ -110,7 +113,7 @@ class StudentControllerTest {
         when(studentService.create(any(StudentCreateRequest.class)))
                 .thenThrow(new DuplicateEmailException("nimal@example.com"));
 
-        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
+        mockMvc.perform(post("/api/v1/students").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY).with(admin()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.message").value("An account with email nimal@example.com already exists"));
@@ -120,7 +123,7 @@ class StudentControllerTest {
     void getByIdReturns200() throws Exception {
         when(studentService.getById(1L)).thenReturn(NIMAL);
 
-        mockMvc.perform(get("/api/v1/students/1"))
+        mockMvc.perform(get("/api/v1/students/1").with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Nimal"));
     }
@@ -129,7 +132,7 @@ class StudentControllerTest {
     void getByIdReturns404WhenMissing() throws Exception {
         when(studentService.getById(99L)).thenThrow(new StudentNotFoundException(99L));
 
-        mockMvc.perform(get("/api/v1/students/99"))
+        mockMvc.perform(get("/api/v1/students/99").with(admin()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Student with id 99 not found"))
@@ -138,7 +141,7 @@ class StudentControllerTest {
 
     @Test
     void getByIdReturns400ForNonNumericId() throws Exception {
-        mockMvc.perform(get("/api/v1/students/abc"))
+        mockMvc.perform(get("/api/v1/students/abc").with(admin()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
     }
@@ -149,7 +152,7 @@ class StudentControllerTest {
         when(studentService.search(eq("nim"), isNull(), isNull(), eq(expected)))
                 .thenReturn(new PageImpl<>(List.of(NIMAL), expected, 1));
 
-        mockMvc.perform(get("/api/v1/students").param("name", "nim"))
+        mockMvc.perform(get("/api/v1/students").param("name", "nim").with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].email").value("nimal@example.com"))
@@ -161,7 +164,7 @@ class StudentControllerTest {
 
     @Test
     void deleteReturns204() throws Exception {
-        mockMvc.perform(delete("/api/v1/students/1"))
+        mockMvc.perform(delete("/api/v1/students/1").with(admin()))
                 .andExpect(status().isNoContent());
         verify(studentService).delete(1L);
     }
@@ -170,7 +173,7 @@ class StudentControllerTest {
     void deleteReturns404WhenMissing() throws Exception {
         doThrow(new StudentNotFoundException(99L)).when(studentService).delete(99L);
 
-        mockMvc.perform(delete("/api/v1/students/99"))
+        mockMvc.perform(delete("/api/v1/students/99").with(admin()))
                 .andExpect(status().isNotFound());
     }
 
@@ -178,7 +181,7 @@ class StudentControllerTest {
     void unexpectedErrorReturns500WithoutDetails() throws Exception {
         when(studentService.getById(1L)).thenThrow(new IllegalStateException("db password is hunter2"));
 
-        mockMvc.perform(get("/api/v1/students/1"))
+        mockMvc.perform(get("/api/v1/students/1").with(admin()))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
                 .andExpect(content().string(not(org.hamcrest.Matchers.containsString("hunter2"))));

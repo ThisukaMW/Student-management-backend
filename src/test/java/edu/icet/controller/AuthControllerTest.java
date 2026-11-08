@@ -4,6 +4,7 @@ import edu.icet.dto.request.LoginRequest;
 import edu.icet.dto.response.StudentResponse;
 import edu.icet.entity.Gender;
 import edu.icet.exception.InvalidCredentialsException;
+import edu.icet.security.WithSecurityConfig;
 import edu.icet.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +15,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static edu.icet.security.TestTokens.admin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
+@WithSecurityConfig
 class AuthControllerTest {
 
     private static final String LOGIN_BODY = """
@@ -63,7 +66,7 @@ class AuthControllerTest {
 
     @Test
     void oldGetLoginEndpointIsGone() throws Exception {
-        mockMvc.perform(get("/information/nimal@example.com/secret123"))
+        mockMvc.perform(get("/information/nimal@example.com/secret123").with(admin()))
                 .andExpect(status().isNotFound());
     }
 }

@@ -26,6 +26,14 @@ spring:
       accept-case-insensitive-enums: true
 
 app:
+  security:
+    jwt:
+      # Required: at least 32 bytes. Set JWT_SECRET in .env or the environment; startup fails without it
+      secret: ${JWT_SECRET:}
+      issuer: student-management
+      access-token-ttl: 15m
+      refresh-token-ttl: 7d
+
   cors:
     allowed-origins:
       - http://localhost:5173
