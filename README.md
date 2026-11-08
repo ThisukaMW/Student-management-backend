@@ -4,7 +4,7 @@ A REST API for registering students and signing them in, built with **Spring Boo
 
 ## Tech stack
 
-- **Java 18**, **Spring Boot 3.1.2**
+- **Java 21**, **Spring Boot 3.5.7**
 - Spring Web (REST controllers)
 - Spring Data JPA / Hibernate
 - MySQL (`mysql-connector-j`)
@@ -91,13 +91,17 @@ DB_PASSWORD=your_password
 
 A `DB_PASSWORD` environment variable works too and takes precedence over `.env`.
 
-Set `MYSQL_HOST` too if MySQL is not on `localhost`. The username defaults to `root` in `src/main/resources/application.yml`.
+If MySQL is not on `localhost`, add `MYSQL_HOST=your_host` to `.env` as well. The username defaults to `root` in `src/main/resources/application.yml`.
 
 ### 3. Run the application
+
+From the command line:
 
 ```bash
 mvn spring-boot:run
 ```
+
+Or in IntelliJ IDEA: open the project, right-click `pom.xml` → **Maven → Reload Project**, then run `edu.icet.Main`.
 
 The API starts on `http://localhost:8080`.
 
@@ -105,6 +109,15 @@ The API starts on `http://localhost:8080`.
 
 Use Postman, or open the [frontend](https://github.com/ThisukaMW/Student-management) in a browser.
 
+## Troubleshooting
+
+| Error | Cause and fix |
+|-------|---------------|
+| `Could not find or load main class edu.icet.Main` | `Main.java` must be in `src/main/java/edu/icet/`. Files in `src/main/resources/` are not compiled. Reload the Maven project after moving it. |
+| `Access denied for user 'root'@'localhost' (using password: NO)` | No password was supplied. Create the `.env` file described above in the project root. |
+| `Access denied for user 'root'@'localhost' (using password: YES)` | The password in `.env` doesn't match your MySQL root password. |
+| `Communications link failure` | MySQL is not running. Start the `MySQL80` service. |
+| `Port 8080 was already in use` | Another copy of the app is still running. Stop it first. |
 
 ## Related
 
