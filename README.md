@@ -73,32 +73,28 @@ Example request body for `POST /information`:
 
 ### Prerequisites
 
-- JDK 18 or newer
+- JDK 21 or newer
 - Maven
 - MySQL 8 running locally
 
-### 1. Create the database
+### 1. Database
 
-```sql
-CREATE DATABASE Student_info;
-```
+The `Student_info` database is created automatically on first run (`createDatabaseIfNotExist=true`), and `ddl-auto: update` lets Hibernate create the student table.
 
 ### 2. Configure the connection
 
-Edit `src/main/resources/application.yml` with your MySQL details:
+The MySQL password is read from the `DB_PASSWORD` environment variable, so it is never stored in the repo. Set it before running:
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/Student_info
-    username: root
-    password: your_password
-  jpa:
-    hibernate:
-      ddl-auto: update
+```bash
+# PowerShell
+$env:DB_PASSWORD = "your_password"
+# bash
+export DB_PASSWORD=your_password
 ```
 
-`ddl-auto: update` lets Hibernate create the student table on first run.
+In IntelliJ, add `DB_PASSWORD=your_password` under **Run → Edit Configurations → Environment variables**.
+
+Set `MYSQL_HOST` too if MySQL is not on `localhost`. The username defaults to `root` in `src/main/resources/application.yml`.
 
 ### 3. Run the application
 

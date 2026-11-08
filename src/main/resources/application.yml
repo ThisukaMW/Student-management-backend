@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/Student_info?createDatabaseIfNotExist=true
     username: root
-    password: Thisuka2003#
+    password: ${DB_PASSWORD:}
 
   jpa:
     hibernate:
